@@ -2,6 +2,7 @@ package com.example.quizmaster
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -22,6 +23,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.util.PatternsCompat
 import com.example.quizmaster.ui.theme.QuizMasterTheme
 
 class LoginActivity : ComponentActivity() {
@@ -29,30 +31,37 @@ class LoginActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             QuizMasterTheme {
-                val context = this
-
-                // Navigate directly on button click (ignore login validation)
-                LoginScreen {
-                    startActivity(Intent(context, HomepageActivity::class.java))
-                    finish()
+                LoginScreen { email, password ->
+                    if (validateInput(email, password)) {
+                        Toast.makeText(this, "Login Successful!", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this, "Invalid Email or Password", Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         }
     }
+
+    private fun validateInput(email: String, password: String): Boolean {
+        return PatternsCompat.EMAIL_ADDRESS.matcher(email).matches() && password.length >= 6
+    }
 }
 
 @Composable
-fun LoginScreen(onLogin: () -> Unit) {
+fun LoginScreen(onLogin: (String, String) -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var emailError by remember { mutableStateOf(false) }
+    var passwordError by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
+    // Gradient Background
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(
                 brush = Brush.verticalGradient(
-                    colors = listOf(Color(0xFF4CAF50), Color(0xFF2196F3))
+                    colors = listOf(Color(0xFF4CAF50), Color(0xFF2196F3)) // Green to Blue gradient
                 )
             ),
         contentAlignment = Alignment.Center
@@ -61,7 +70,7 @@ fun LoginScreen(onLogin: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth(0.9f)
                 .clip(RoundedCornerShape(16.dp))
-                .background(Color.White)
+                .background(Color.White) // Card effect for form
                 .padding(24.dp),
             verticalArrangement = Arrangement.Center
         ) {
@@ -75,27 +84,41 @@ fun LoginScreen(onLogin: () -> Unit) {
 
             OutlinedTextField(
                 value = email,
-                onValueChange = { email = it },
+                onValueChange = {
+                    email = it
+                    emailError = !PatternsCompat.EMAIL_ADDRESS.matcher(it).matches()
+                },
                 label = { Text("Email") },
+                isError = emailError,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 modifier = Modifier.fillMaxWidth()
             )
+            if (emailError) {
+                Text(text = "Invalid Email", color = MaterialTheme.colorScheme.error)
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 
             OutlinedTextField(
                 value = password,
-                onValueChange = { password = it },
+                onValueChange = {
+                    password = it
+                    passwordError = it.length < 6
+                },
                 label = { Text("Password") },
+                isError = passwordError,
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 modifier = Modifier.fillMaxWidth()
             )
+            if (passwordError) {
+                Text(text = "Password must be at least 6 characters", color = MaterialTheme.colorScheme.error)
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(
-                onClick = { onLogin() },
+                onClick = { onLogin(email, password) },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = GreenPrimary)
             ) {
@@ -104,18 +127,21 @@ fun LoginScreen(onLogin: () -> Unit) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // SIGN UP BUTTON WITH BOLD TEXT
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically // Fix alignment issue
             ) {
                 Text(text = "Don't have an account?", fontSize = 16.sp, color = Color.Gray)
+
                 Spacer(modifier = Modifier.width(4.dp))
+
                 TextButton(
                     onClick = {
                         context.startActivity(Intent(context, SignUpActivity::class.java))
                     },
-                    contentPadding = PaddingValues(0.dp)
+                    contentPadding = PaddingValues(0.dp) // Fix padding issue
                 ) {
                     Text(
                         text = "Sign Up",
@@ -125,18 +151,19 @@ fun LoginScreen(onLogin: () -> Unit) {
                     )
                 }
             }
+
         }
     }
 }
 
-// Theme colors
-val GreenPrimary = Color(0xFF4CAF50)
-val BlueSecondary = Color(0xFF2196F3)
+// Define theme colors
+val GreenPrimary = Color(0xFF4CAF50) // Green
+val BlueSecondary = Color(0xFF2196F3) // Blue
 
 @Preview(showBackground = true)
 @Composable
 fun LoginScreenPreview() {
     QuizMasterTheme {
-        LoginScreen { }
+        LoginScreen { _, _ -> }
     }
 }
