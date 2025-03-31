@@ -1,5 +1,6 @@
 package com.example.quizmaster
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -17,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -103,10 +105,16 @@ fun MenuScreen() {
 
 @Composable
 fun QuizCategory(name: String) {
+    val context = LocalContext.current
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { /* TODO: Navigate to quiz */ }
+            .clickable {
+                val intent = Intent(context, QuizIntroActivity::class.java)
+                intent.putExtra("subject", name)
+                context.startActivity(intent)
+            }
             .padding(horizontal = 8.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
@@ -119,6 +127,7 @@ fun QuizCategory(name: String) {
         }
     }
 }
+
 
 @Composable
 fun LeaderboardScreen() {
