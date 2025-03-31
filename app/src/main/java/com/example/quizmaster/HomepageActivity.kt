@@ -17,6 +17,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.quizmaster.ui.theme.QuizMasterTheme
 
+
+
+
+
 class HomepageActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,7 +34,7 @@ class HomepageActivity : ComponentActivity() {
 
 @Composable
 fun HomeScreen() {
-    var selectedTab by remember { mutableStateOf(0) }
+    var selectedTab by remember { mutableIntStateOf(0) } // ✅ No warning with mutableIntStateOf
 
     Scaffold(
         bottomBar = {
@@ -103,20 +107,83 @@ fun QuizCategory(name: String) {
 
 @Composable
 fun LeaderboardScreen() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+    val leaderboardData = listOf(
+        "Alice" to 98,
+        "Bob" to 91,
+        "Charlie" to 87,
+        "Diana" to 85,
+        "Eve" to 80
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
     ) {
-        Text("Leaderboard (Coming Soon)", fontSize = 20.sp)
+        Text(
+            text = "Leaderboard",
+            style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        leaderboardData.forEachIndexed { index, (name, score) ->
+            LeaderboardRow(rank = index + 1, name = name, score = score)
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+    }
+}
+
+@Composable
+fun LeaderboardRow(rank: Int, name: String, score: Int) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(text = "#$rank $name", fontSize = 18.sp)
+            Text(text = "$score pts", fontSize = 18.sp)
+        }
     }
 }
 
 @Composable
 fun ProfileScreen() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("User Profile (Coming Soon)", fontSize = 20.sp)
+        Text("My Profile", style = MaterialTheme.typography.headlineSmall)
+
+        // Dummy Profile Details
+        ProfileItem(label = "Name", value = "John Doe")
+        ProfileItem(label = "Email", value = "john.doe@example.com")
+        ProfileItem(label = "Total Quizzes Taken", value = "12")
+        ProfileItem(label = "Highest Score", value = "98")
+    }
+}
+
+@Composable
+fun ProfileItem(label: String, value: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(text = label, fontSize = 16.sp)
+            Text(text = value, fontSize = 16.sp)
+        }
     }
 }
