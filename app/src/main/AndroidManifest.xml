@@ -39,6 +39,17 @@
             android:exported="true"
             android:theme="@style/Theme.QuizMaster">
         </activity>
+        <activity
+            android:name=".QuizActivity"
+            android:exported="true"
+            android:theme="@style/Theme.QuizMaster">
+        </activity>
+        <activity
+            android:name=".QuizIntroActivity"
+            android:exported="true"
+            android:theme="@style/Theme.QuizMaster">
+        </activity>
+
 
     </application>
 
