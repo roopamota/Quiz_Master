@@ -29,41 +29,32 @@ class QuizActivity : ComponentActivity() {
     }
 }
 
-// -------------------------- UI COMPOSABLES --------------------------
-
 @Composable
 fun QuizScreen(subject: String) {
-    val questions = listOf(
-        QuizQuestion(
-            question = "What is Kotlin?",
-            options = listOf("A language", "A planet", "A car", "A framework"),
-            correctAnswer = 0
+    val allQuestions = mapOf(
+        "Python" to listOf(
+            QuizQuestion("What is the correct file extension for Python files?", listOf(".py", ".pt", ".pyt", ".pyth"), 0),
+            QuizQuestion("Which keyword is used for function in Python?", listOf("func", "define", "def", "function"), 2),
+            QuizQuestion("Which data type is used to store True or False?", listOf("int", "str", "bool", "float"), 2),
         ),
-        QuizQuestion(
-            question = "What does OOP stand for?",
-            options = listOf("Only One Process", "Object Oriented Programming", "Open Office Project", "Object Overload Principle"),
-            correctAnswer = 1
+        "OOPs" to listOf(
+            QuizQuestion("OOP stands for?", listOf("Object Oriented Programming", "Operator On Point", "Optical Operation", "Ordered Oriented Procedure"), 0),
+            QuizQuestion("Which of the following is not a pillar of OOP?", listOf("Encapsulation", "Polymorphism", "Abstraction", "Compilation"), 3),
+            QuizQuestion("What is inheritance?", listOf("A way to inherit money", "A way to reuse code", "A loop concept", "A variable type"), 1),
         ),
-        QuizQuestion(
-            question = "What is a Python dictionary?",
-            options = listOf("A book", "A variable", "A key-value store", "A snake data type"),
-            correctAnswer = 2
-        ),
-        QuizQuestion(
-            question = "What is Machine Learning?",
-            options = listOf("A cooking method", "An AI technique", "A machine part", "A language"),
-            correctAnswer = 1
-        ),
-        QuizQuestion(
-            question = "What is the extension of a Kotlin file?",
-            options = listOf(".java", ".kt", ".kotlin", ".xml"),
-            correctAnswer = 1
+        "Machine Learning" to listOf(
+            QuizQuestion("ML is a subset of?", listOf("Math", "AI", "Physics", "Robotics"), 1),
+            QuizQuestion("Which of these is a ML algorithm?", listOf("Linear Regression", "Sorting", "Searching", "Merging"), 0),
+            QuizQuestion("What is overfitting?", listOf("When a model is too simple", "When a model fits the training data too well", "A type of neural network", "None"), 1),
         )
     )
 
+    val questions = allQuestions[subject] ?: emptyList()
+
     var currentIndex by remember { mutableIntStateOf(0) }
     var selectedAnswer by remember { mutableIntStateOf(-1) }
-    var timer by remember { mutableIntStateOf(10) } // 10 seconds per question
+    var timer by remember { mutableIntStateOf(10) }
+    var score by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(key1 = currentIndex) {
@@ -111,6 +102,7 @@ fun QuizScreen(subject: String) {
 
             Button(
                 onClick = {
+                    if (selectedAnswer == question.correctAnswer) score++
                     currentIndex++
                 },
                 enabled = selectedAnswer != -1
@@ -123,7 +115,7 @@ fun QuizScreen(subject: String) {
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            Text("🎉 Quiz Complete!", fontSize = 24.sp)
+            Text("🎉 Quiz Complete! Your Score: $score/${questions.size}", fontSize = 24.sp)
         }
     }
 }
@@ -149,7 +141,6 @@ fun AnswerOption(text: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 // -------------------------- DATA MODEL --------------------------
-
 data class QuizQuestion(
     val question: String,
     val options: List<String>,
