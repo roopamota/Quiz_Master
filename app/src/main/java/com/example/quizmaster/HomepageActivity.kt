@@ -4,7 +4,6 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -16,17 +15,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.quizmaster.ui.theme.QuizMasterTheme
-
-
-
-
 
 class HomepageActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,18 +35,28 @@ class HomepageActivity : ComponentActivity() {
 }
 
 @Composable
+fun AppBackground(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(Color(0xFF2196F3), Color(0xFF64B5F6))
+                )
+            ),
+        content = content
+    )
+}
+
+@Composable
 fun HomeScreen() {
     var selectedTab by remember { mutableIntStateOf(0) }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFBBDEFB)) // Light blue background
-    ) {
+    AppBackground {
         Scaffold(
-            containerColor = Color.Transparent, // So background shows through
+            containerColor = Color.Transparent,
             bottomBar = {
-                NavigationBar {
+                NavigationBar(containerColor = Color.White) {
                     NavigationBarItem(
                         selected = selectedTab == 0,
                         onClick = { selectedTab = 0 },
@@ -73,9 +78,12 @@ fun HomeScreen() {
                 }
             }
         ) { innerPadding ->
-            Box(modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(16.dp)
+            ) {
                 when (selectedTab) {
                     0 -> MenuScreen()
                     1 -> LeaderboardScreen()
@@ -86,17 +94,16 @@ fun HomeScreen() {
     }
 }
 
-
 @Composable
 fun MenuScreen() {
     Column(
         modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+            .fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Select a Subject", fontSize = 24.sp)
+        Text("Select a Subject", fontSize = 26.sp, color = Color.White, fontWeight = FontWeight.Bold)
+
         QuizCategory("Python")
         QuizCategory("OOPs")
         QuizCategory("Machine Learning")
@@ -114,63 +121,59 @@ fun QuizCategory(name: String) {
                 val intent = Intent(context, QuizIntroActivity::class.java)
                 intent.putExtra("subject", name)
                 context.startActivity(intent)
-            }
-            .padding(horizontal = 8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            },
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Box(
-            modifier = Modifier
-                .padding(16.dp),
+            modifier = Modifier.padding(20.dp),
             contentAlignment = Alignment.Center
         ) {
-            Text(text = name, fontSize = 20.sp)
+            Text(text = name, fontSize = 20.sp, fontWeight = FontWeight.Medium, color = Color(0xFF2196F3))
         }
     }
 }
 
-
 @Composable
 fun LeaderboardScreen() {
-    val leaderboardData = listOf(
-        "Alice" to 98,
-        "Bob" to 91,
-        "Charlie" to 87,
-        "Diana" to 85,
-        "Eve" to 80
-    )
+    val entries = LeaderboardManager.entries.reversed()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
     ) {
         Text(
             text = "Leaderboard",
             style = MaterialTheme.typography.headlineSmall,
+            color = Color.White,
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
-        leaderboardData.forEachIndexed { index, (name, score) ->
-            LeaderboardRow(rank = index + 1, name = name, score = score)
-            Spacer(modifier = Modifier.height(8.dp))
+        if (entries.isEmpty()) {
+            Text(
+                "No scores yet. Take a quiz to get started!",
+                color = Color.White.copy(alpha = 0.8f)
+            )
+        } else {
+            entries.forEachIndexed { index, entry ->
+                LeaderboardRow(entry = entry, rank = index + 1)
+                Spacer(modifier = Modifier.height(8.dp))
+            }
         }
     }
 }
 
 @Composable
-fun LeaderboardRow(rank: Int, name: String, score: Int) {
+fun LeaderboardRow(entry: LeaderboardEntry, rank: Int) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(text = "#$rank $name", fontSize = 18.sp)
-            Text(text = "$score pts", fontSize = 18.sp)
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("#$rank - ${entry.subject}", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2196F3))
+            Spacer(modifier = Modifier.height(4.dp))
+            Text("Score: ${entry.score}/${entry.total} • Time: ${entry.timeTakenSeconds}s", fontSize = 16.sp)
         }
     }
 }
@@ -179,18 +182,16 @@ fun LeaderboardRow(rank: Int, name: String, score: Int) {
 fun ProfileScreen() {
     Column(
         modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
+            .fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("My Profile", style = MaterialTheme.typography.headlineSmall)
+        Text("My Profile", style = MaterialTheme.typography.headlineSmall, color = Color.White)
 
-        // Dummy Profile Details
-        ProfileItem(label = "Name", value = "John Doe")
-        ProfileItem(label = "Email", value = "john.doe@example.com")
-        ProfileItem(label = "Total Quizzes Taken", value = "12")
-        ProfileItem(label = "Highest Score", value = "98")
+        ProfileItem(label = "Name", value = "Roopa Mota")
+        ProfileItem(label = "Email", value = "roopamota260@gmail.com")
+        ProfileItem(label = "Total Quizzes Taken", value = "${LeaderboardManager.entries.size}")
+        ProfileItem(label = "Highest Score", value = "${LeaderboardManager.entries.maxOfOrNull { it.score } ?: 0}")
     }
 }
 
@@ -198,7 +199,8 @@ fun ProfileScreen() {
 fun ProfileItem(label: String, value: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Row(
             modifier = Modifier
@@ -207,7 +209,11 @@ fun ProfileItem(label: String, value: String) {
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(text = label, fontSize = 16.sp)
-            Text(text = value, fontSize = 16.sp)
+            Text(text = value, fontSize = 16.sp, fontWeight = FontWeight.Medium)
         }
     }
 }
+
+
+
+
