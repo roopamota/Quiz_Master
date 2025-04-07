@@ -55,23 +55,27 @@ fun QuizScreen(subject: String) {
     var selectedAnswer by remember { mutableIntStateOf(-1) }
     var timer by remember { mutableIntStateOf(10) }
     var score by remember { mutableIntStateOf(0) }
+    var quizCompleted by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(key1 = currentIndex) {
-        selectedAnswer = -1
-        timer = 10
-        scope.launch {
-            while (timer > 0) {
-                delay(1000)
-                timer--
-            }
-            if (timer == 0) {
-                currentIndex++
+    LaunchedEffect(key1 = currentIndex, key2 = quizCompleted) {
+        if (!quizCompleted && currentIndex < questions.size) {
+            selectedAnswer = -1
+            timer = 10
+            scope.launch {
+                while (timer > 0) {
+                    delay(1000)
+                    timer--
+                }
+                if (timer == 0) {
+                    currentIndex++
+                    if (currentIndex >= questions.size) quizCompleted = true
+                }
             }
         }
     }
 
-    if (currentIndex < questions.size) {
+    if (!quizCompleted && currentIndex < questions.size) {
         val question = questions[currentIndex]
 
         Column(
@@ -104,18 +108,41 @@ fun QuizScreen(subject: String) {
                 onClick = {
                     if (selectedAnswer == question.correctAnswer) score++
                     currentIndex++
+                    if (currentIndex >= questions.size) quizCompleted = true
                 },
                 enabled = selectedAnswer != -1
             ) {
                 Text("Next")
             }
         }
-    } else {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
+    } else if (quizCompleted) {
+        val percentage = (score.toFloat() / questions.size.toFloat()) * 100
+        val passed = percentage >= 50
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("🎉 Quiz Complete! Your Score: $score/${questions.size}", fontSize = 24.sp)
+            Text(
+                text = if (passed) " Test Passed!" else " Test Failed!",
+                fontSize = 24.sp,
+                color = if (passed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text("Your Score: $score/${questions.size} (${"%.1f".format(percentage)}%)", fontSize = 20.sp)
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Button(onClick = {
+                currentIndex = 0
+                score = 0
+                quizCompleted = false
+            }) {
+                Text("Retake Quiz")
+            }
         }
     }
 }
