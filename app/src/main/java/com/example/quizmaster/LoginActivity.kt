@@ -22,6 +22,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.example.quizmaster.ui.theme.QuizMasterTheme
 
 class LoginActivity : ComponentActivity() {
@@ -30,8 +31,6 @@ class LoginActivity : ComponentActivity() {
         setContent {
             QuizMasterTheme {
                 val context = this
-
-                // Navigate directly on button click (ignore login validation)
                 LoginScreen {
                     startActivity(Intent(context, HomepageActivity::class.java))
                     finish()
@@ -46,13 +45,52 @@ fun LoginScreen(onLogin: () -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val context = LocalContext.current
+    var showGdprDialog by remember { mutableStateOf(true) }
+
+    if (showGdprDialog) {
+        Dialog(onDismissRequest = { }) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFFBBDEFB) // Light blue
+                ),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        text = "GDPR Compliance",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = BlueSecondary
+                    )
+                    Text(
+                        text = "We use your data to improve your quiz experience. " +
+                                "By continuing, you agree to our terms and privacy policy.",
+                        fontSize = 16.sp,
+                        color = Color.Black
+                    )
+                    Button(
+                        onClick = { showGdprDialog = false },
+                        modifier = Modifier.align(Alignment.End),
+                        colors = ButtonDefaults.buttonColors(containerColor = BlueSecondary)
+                    ) {
+                        Text("I Agree", color = Color.White)
+                    }
+                }
+            }
+        }
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(
                 brush = Brush.verticalGradient(
-                    colors = listOf(Color(0xFF4CAF50), Color(0xFF2196F3))
+                    colors = listOf(GreenPrimary, BlueSecondary)
                 )
             ),
         contentAlignment = Alignment.Center
@@ -129,6 +167,7 @@ fun LoginScreen(onLogin: () -> Unit) {
     }
 }
 
+
 // Theme colors
 val GreenPrimary = Color(0xFF4CAF50)
 val BlueSecondary = Color(0xFF2196F3)
@@ -140,3 +179,4 @@ fun LoginScreenPreview() {
         LoginScreen { }
     }
 }
+
