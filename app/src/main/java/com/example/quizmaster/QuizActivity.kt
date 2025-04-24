@@ -20,6 +20,7 @@ import com.example.quizmaster.ui.theme.QuizMasterTheme
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import java.util.*
 
 class QuizActivity : ComponentActivity() {
@@ -35,6 +36,9 @@ class QuizActivity : ComponentActivity() {
         }
     }
 }
+
+
+
 
 @Composable
 fun QuizScreen(subject: String) {
@@ -153,7 +157,7 @@ fun QuizScreen(subject: String) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = if (passed) "🎉 Test Passed!" else "❌ Test Failed!",
+                    text = if (passed) " Test Passed!" else " Test Failed!",
                     fontSize = 24.sp,
                     color = if (passed) Color.White else Color.Red
                 )
@@ -195,6 +199,10 @@ fun QuizScreen(subject: String) {
         }
     }
 }
+
+
+
+
 
 @Composable
 fun AnswerOption(text: String, selected: Boolean, onClick: () -> Unit) {

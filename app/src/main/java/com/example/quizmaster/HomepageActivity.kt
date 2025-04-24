@@ -96,6 +96,8 @@ fun HomeScreen() {
 
 @Composable
 fun MenuScreen() {
+    val context = LocalContext.current
+
     Column(
         modifier = Modifier
             .fillMaxSize(),
@@ -107,8 +109,18 @@ fun MenuScreen() {
         QuizCategory("Python")
         QuizCategory("OOPs")
         QuizCategory("Machine Learning")
+
+        // Developer Upload Button
+        TextButton(
+            onClick = {
+                context.startActivity(Intent(context, UploadQuestionsActivity::class.java))
+            }
+        ) {
+            Text("Developer: Upload Questions", color = Color.Yellow)
+        }
     }
 }
+
 
 @Composable
 fun QuizCategory(name: String) {
