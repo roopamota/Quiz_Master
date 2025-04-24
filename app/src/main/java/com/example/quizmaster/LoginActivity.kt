@@ -4,7 +4,9 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -26,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.quizmaster.ui.theme.QuizMasterTheme
 import com.google.firebase.auth.FirebaseAuth
+
 
 class LoginActivity : ComponentActivity() {
     private lateinit var auth: FirebaseAuth
@@ -61,6 +64,23 @@ fun LoginScreen(onLogin: (String, String) -> Unit) {
     var password by remember { mutableStateOf("") }
     val context = LocalContext.current
     var showGdprDialog by remember { mutableStateOf(true) }
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            if (isGranted) {
+                Toast.makeText(context, "Location permission granted", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "Location permission denied", Toast.LENGTH_SHORT).show()
+            }
+        }
+    )
+
+    Button(onClick = {
+        locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+    }) {
+        Text("Enable Location")
+    }
 
     if (showGdprDialog) {
         Dialog(onDismissRequest = { }) {

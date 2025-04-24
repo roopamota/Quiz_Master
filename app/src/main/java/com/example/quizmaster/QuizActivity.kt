@@ -2,6 +2,7 @@ package com.example.quizmaster
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -26,9 +27,7 @@ import java.util.*
 class QuizActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         val subject = intent.getStringExtra("subject") ?: "General"
-
         setContent {
             QuizMasterTheme {
                 QuizScreen(subject)
@@ -50,6 +49,7 @@ fun QuizScreen(subject: String) {
     var quizCompleted by remember { mutableStateOf(false) }
     var totalTime by remember { mutableIntStateOf(0) }
     var loading by remember { mutableStateOf(true) }
+    var savedToFirestore by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
 
@@ -99,6 +99,7 @@ fun QuizScreen(subject: String) {
             loading -> {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color.White)
             }
+
             !quizCompleted && currentIndex < questions.size -> {
                 val question = questions[currentIndex]
 
@@ -141,15 +142,42 @@ fun QuizScreen(subject: String) {
                     }
                 }
             }
+
             else -> {
                 val percentage = (score.toFloat() / questions.size.toFloat()) * 100
                 val passed = percentage >= 50
 
+                // Save score to Firestore only once
                 LaunchedEffect(Unit) {
-                    LeaderboardManager.entries.add(
-                        LeaderboardEntry(subject, score, questions.size, totalTime)
-                    )
+                    if (!savedToFirestore) {
+                        val result = LeaderboardEntry(
+                            subject = subject,
+                            score = score,
+                            total = questions.size,
+                            timeTakenSeconds = totalTime
+                        )
+
+                        // Add to local state (if needed)
+                        LeaderboardManager.entries.add(result)
+
+                        // Create a unique ID using subject + timestamp
+                        val docId = "$subject-${System.currentTimeMillis()}"
+
+                        FirebaseFirestore.getInstance()
+                            .collection("leaderboard")
+                            .document(docId) // ⬅️ avoids auto ID and nested document
+                            .set(result)     // ⬅️ replaces `.add(...)`
+                            .addOnSuccessListener {
+                                Toast.makeText(context, "Score saved to leaderboard", Toast.LENGTH_SHORT).show()
+                            }
+                            .addOnFailureListener {
+                                Toast.makeText(context, "Failed to save score", Toast.LENGTH_SHORT).show()
+                            }
+
+                        savedToFirestore = true
+                    }
                 }
+
 
                 Column(
                     modifier = Modifier.fillMaxSize(),
@@ -157,7 +185,7 @@ fun QuizScreen(subject: String) {
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = if (passed) "🎉 Test Passed!" else "❌ Test Failed!",
+                        text = if (passed) " Test Passed!" else " Test Failed!",
                         fontSize = 24.sp,
                         color = if (passed) Color.White else Color.Red
                     )
@@ -177,6 +205,7 @@ fun QuizScreen(subject: String) {
                             score = 0
                             quizCompleted = false
                             totalTime = 0
+                            savedToFirestore = false
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color.White)
                     ) {
@@ -231,10 +260,10 @@ data class QuizQuestion(
 )
 
 data class LeaderboardEntry(
-    val subject: String,
-    val score: Int,
-    val total: Int,
-    val timeTakenSeconds: Int
+    val subject: String = "",
+    val score: Int = 0,
+    val total: Int = 0,
+    val timeTakenSeconds: Int = 0
 )
 
 object LeaderboardManager {

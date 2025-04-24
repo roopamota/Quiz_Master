@@ -8,11 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Leaderboard
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,6 +21,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.quizmaster.ui.theme.QuizMasterTheme
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.tasks.await
 
 class HomepageActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,6 +52,7 @@ fun AppBackground(modifier: Modifier = Modifier, content: @Composable BoxScope.(
 @Composable
 fun HomeScreen() {
     var selectedTab by remember { mutableIntStateOf(0) }
+    val context = LocalContext.current
 
     AppBackground {
         Scaffold(
@@ -96,6 +95,7 @@ fun HomeScreen() {
         }
     }
 }
+
 
 @Composable
 fun MenuScreen(onLogout: () -> Unit = {}) {
@@ -219,11 +219,33 @@ fun QuizCategory(name: String) {
 
 @Composable
 fun LeaderboardScreen() {
-    val entries = LeaderboardManager.entries.reversed()
+    var entries by remember { mutableStateOf<List<LeaderboardEntry>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+    val firestore = FirebaseFirestore.getInstance()
+
+    // Fetch leaderboard data directly from "leaderboard" collection
+    LaunchedEffect(Unit) {
+        try {
+            val snapshot = firestore.collection("leaderboard")
+                .orderBy("score", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .get()
+                .await()
+
+
+
+
+    entries = snapshot.documents.mapNotNull { it.toObject(LeaderboardEntry::class.java) }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            loading = false
+        }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .padding(16.dp)
     ) {
         Text(
             text = "Leaderboard",
@@ -232,9 +254,11 @@ fun LeaderboardScreen() {
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
-        if (entries.isEmpty()) {
+        if (loading) {
+            CircularProgressIndicator(color = Color.White)
+        } else if (entries.isEmpty()) {
             Text(
-                "No scores yet. Take a quiz to get started!",
+                text = "No scores yet. Take a quiz to get started!",
                 color = Color.White.copy(alpha = 0.8f)
             )
         } else {
@@ -245,6 +269,7 @@ fun LeaderboardScreen() {
         }
     }
 }
+
 
 @Composable
 fun LeaderboardRow(entry: LeaderboardEntry, rank: Int) {
@@ -296,6 +321,9 @@ fun ProfileItem(label: String, value: String) {
         }
     }
 }
+
+
+
 
 
 
