@@ -37,9 +37,6 @@ class QuizActivity : ComponentActivity() {
     }
 }
 
-
-
-
 @Composable
 fun QuizScreen(subject: String) {
     val context = LocalContext.current
@@ -52,27 +49,28 @@ fun QuizScreen(subject: String) {
     var score by remember { mutableIntStateOf(0) }
     var quizCompleted by remember { mutableStateOf(false) }
     var totalTime by remember { mutableIntStateOf(0) }
-    val scope = rememberCoroutineScope()
-
     var loading by remember { mutableStateOf(true) }
+
+    val scope = rememberCoroutineScope()
 
     // Fetch questions from Firestore
     LaunchedEffect(subject) {
-        firestore.collection("quizzes")
-            .document(subject)
-            .collection("questions")
-            .get()
-            .addOnSuccessListener { snapshot ->
-                questions = snapshot.documents.mapNotNull { doc ->
-                    doc.toObject(QuizQuestion::class.java)
-                }.shuffled()
-                loading = false
-            }
-            .addOnFailureListener {
-                loading = false
-            }
+        try {
+            val snapshot = firestore.collection("quizzes")
+                .document(subject)
+                .collection("questions")
+                .get()
+                .await()
+
+            questions = snapshot.documents.mapNotNull { it.toObject(QuizQuestion::class.java) }.shuffled()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            loading = false
+        }
     }
 
+    // Timer logic
     LaunchedEffect(currentIndex, quizCompleted, questions) {
         if (!quizCompleted && questions.isNotEmpty() && currentIndex < questions.size) {
             selectedAnswer = -1
@@ -97,112 +95,111 @@ fun QuizScreen(subject: String) {
             .background(Brush.verticalGradient(listOf(Color(0xFF2196F3), Color(0xFF64B5F6))))
             .padding(24.dp)
     ) {
-        if (loading) {
-            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color.White)
-        } else if (!quizCompleted && currentIndex < questions.size) {
-            val question = questions[currentIndex]
+        when {
+            loading -> {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color.White)
+            }
+            !quizCompleted && currentIndex < questions.size -> {
+                val question = questions[currentIndex]
 
-            Column(
-                verticalArrangement = Arrangement.spacedBy(20.dp),
-                horizontalAlignment = Alignment.Start,
-                modifier = Modifier.fillMaxSize()
-            ) {
-                LinearProgressIndicator(
-                    progress = (currentIndex + 1) / questions.size.toFloat(),
-                    modifier = Modifier.fillMaxWidth(),
-                    color = Color.White,
-                    trackColor = Color.White.copy(alpha = 0.3f)
-                )
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(20.dp),
+                    horizontalAlignment = Alignment.Start,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    LinearProgressIndicator(
+                        progress = (currentIndex + 1) / questions.size.toFloat(),
+                        modifier = Modifier.fillMaxWidth(),
+                        color = Color.White,
+                        trackColor = Color.White.copy(alpha = 0.3f)
+                    )
 
-                Text("Subject: $subject", fontSize = 20.sp, color = Color.White)
-                Text("Time left: $timer sec", fontSize = 16.sp, color = Color.White)
-                Text("Q${currentIndex + 1}: ${question.question}", fontSize = 18.sp, color = Color.White)
+                    Text("Subject: $subject", fontSize = 20.sp, color = Color.White)
+                    Text("Time left: $timer sec", fontSize = 16.sp, color = Color.White)
+                    Text("Q${currentIndex + 1}: ${question.question}", fontSize = 18.sp, color = Color.White)
 
-                question.options.forEachIndexed { index, option ->
-                    AnswerOption(
-                        text = option,
-                        selected = selectedAnswer == index,
-                        onClick = { selectedAnswer = index }
+                    question.options.forEachIndexed { index, option ->
+                        AnswerOption(
+                            text = option,
+                            selected = selectedAnswer == index,
+                            onClick = { selectedAnswer = index }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    Button(
+                        onClick = {
+                            if (selectedAnswer == question.correctAnswer) score++
+                            currentIndex++
+                            if (currentIndex >= questions.size) quizCompleted = true
+                        },
+                        enabled = selectedAnswer != -1,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White)
+                    ) {
+                        Text("Next", color = Color(0xFF2196F3))
+                    }
+                }
+            }
+            else -> {
+                val percentage = (score.toFloat() / questions.size.toFloat()) * 100
+                val passed = percentage >= 50
+
+                LaunchedEffect(Unit) {
+                    LeaderboardManager.entries.add(
+                        LeaderboardEntry(subject, score, questions.size, totalTime)
                     )
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Button(
-                    onClick = {
-                        if (selectedAnswer == question.correctAnswer) score++
-                        currentIndex++
-                        if (currentIndex >= questions.size) quizCompleted = true
-                    },
-                    enabled = selectedAnswer != -1,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White)
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("Next", color = Color(0xFF2196F3))
-                }
-            }
-        } else if (quizCompleted) {
-            val percentage = (score.toFloat() / questions.size.toFloat()) * 100
-            val passed = percentage >= 50
+                    Text(
+                        text = if (passed) "🎉 Test Passed!" else "❌ Test Failed!",
+                        fontSize = 24.sp,
+                        color = if (passed) Color.White else Color.Red
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        "Your Score: $score/${questions.size} (${String.format(Locale.getDefault(), "%.1f", percentage)}%)",
+                        fontSize = 20.sp,
+                        color = Color.White
+                    )
+                    Text("Time Taken: ${totalTime}s", fontSize = 16.sp, color = Color.White)
 
-            // Save to leaderboard
-            LaunchedEffect(Unit) {
-                LeaderboardManager.entries.add(
-                    LeaderboardEntry(subject, score, questions.size, totalTime)
-                )
-            }
+                    Spacer(modifier = Modifier.height(24.dp))
 
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = if (passed) " Test Passed!" else " Test Failed!",
-                    fontSize = 24.sp,
-                    color = if (passed) Color.White else Color.Red
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    "Your Score: $score/${questions.size} (${String.format(Locale.getDefault(), "%.1f", percentage)}%)",
-                    fontSize = 20.sp,
-                    color = Color.White
-                )
-                Text("Time Taken: ${totalTime}s", fontSize = 16.sp, color = Color.White)
+                    Button(
+                        onClick = {
+                            currentIndex = 0
+                            score = 0
+                            quizCompleted = false
+                            totalTime = 0
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White)
+                    ) {
+                        Text("Retake Quiz", color = Color(0xFF2196F3))
+                    }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                Button(
-                    onClick = {
-                        currentIndex = 0
-                        score = 0
-                        quizCompleted = false
-                        totalTime = 0
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White)
-                ) {
-                    Text("Retake Quiz", color = Color(0xFF2196F3))
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Button(
-                    onClick = {
-                        val intent = Intent(context, HomepageActivity::class.java)
-                        intent.putExtra("openTab", 1)
-                        context.startActivity(intent)
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White)
-                ) {
-                    Text("Go to Leaderboard", color = Color(0xFF2196F3))
+                    Button(
+                        onClick = {
+                            val intent = Intent(context, HomepageActivity::class.java)
+                            intent.putExtra("openTab", 1)
+                            context.startActivity(intent)
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White)
+                    ) {
+                        Text("Go to Leaderboard", color = Color(0xFF2196F3))
+                    }
                 }
             }
         }
     }
 }
-
-
-
-
 
 @Composable
 fun AnswerOption(text: String, selected: Boolean, onClick: () -> Unit) {
@@ -224,6 +221,8 @@ fun AnswerOption(text: String, selected: Boolean, onClick: () -> Unit) {
         )
     }
 }
+
+// ------------------------ DATA MODELS ------------------------
 
 data class QuizQuestion(
     val question: String = "",

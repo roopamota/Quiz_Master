@@ -110,14 +110,7 @@ fun MenuScreen() {
         QuizCategory("OOPs")
         QuizCategory("Machine Learning")
 
-        // Developer Upload Button
-        TextButton(
-            onClick = {
-                context.startActivity(Intent(context, UploadQuestionsActivity::class.java))
-            }
-        ) {
-            Text("Developer: Upload Questions", color = Color.Yellow)
-        }
+
     }
 }
 
