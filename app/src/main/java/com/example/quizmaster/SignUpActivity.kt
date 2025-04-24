@@ -35,9 +35,16 @@ class SignUpActivity : ComponentActivity() {
                         auth.createUserWithEmailAndPassword(email, password)
                             .addOnCompleteListener(this) { task ->
                                 if (task.isSuccessful) {
-                                    Toast.makeText(this, "Sign Up Successful!", Toast.LENGTH_SHORT).show()
-                                    startActivity(Intent(this, LoginActivity::class.java))
-                                    finish()
+                                    val user = auth.currentUser
+                                    user?.sendEmailVerification()
+                                        ?.addOnSuccessListener {
+                                            Toast.makeText(this, "Verification email sent. Please verify to log in.", Toast.LENGTH_LONG).show()
+                                            startActivity(Intent(this, LoginActivity::class.java))
+                                            finish()
+                                        }
+                                        ?.addOnFailureListener {
+                                            Toast.makeText(this, "Failed to send verification email.", Toast.LENGTH_SHORT).show()
+                                        }
                                 } else {
                                     Toast.makeText(this, "Sign Up Failed: ${task.exception?.message}", Toast.LENGTH_LONG).show()
                                 }
@@ -56,6 +63,7 @@ class SignUpActivity : ComponentActivity() {
                 password == confirmPassword
     }
 }
+
 
 
 @Composable
