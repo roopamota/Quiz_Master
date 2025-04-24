@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Leaderboard
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.quizmaster.ui.theme.QuizMasterTheme
+import com.google.firebase.auth.FirebaseAuth
 
 class HomepageActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -95,24 +98,99 @@ fun HomeScreen() {
 }
 
 @Composable
-fun MenuScreen() {
+fun MenuScreen(onLogout: () -> Unit = {}) {
     val context = LocalContext.current
+    var expanded by remember { mutableStateOf(false) }
+    var showPrivacyDialog by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterVertically),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text("Select a Subject", fontSize = 26.sp, color = Color.White, fontWeight = FontWeight.Bold)
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Top AppBar content
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+                .align(Alignment.TopStart),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "Select a Subject",
+                fontSize = 26.sp,
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
 
-        QuizCategory("Python")
-        QuizCategory("OOPs")
-        QuizCategory("Machine Learning")
+            Box {
+                IconButton(onClick = { expanded = true }) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Settings",
+                        tint = Color.White
+                    )
+                }
 
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Privacy Policy") },
+                        onClick = {
+                            expanded = false
+                            showPrivacyDialog = true
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Sign Out") },
+                        onClick = {
+                            expanded = false
+                            FirebaseAuth.getInstance().signOut()
+                            val intent = Intent(context, LoginActivity::class.java)
+                            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                            context.startActivity(intent)
+                        }
+                    )
+                }
+            }
+        }
 
+        // Subject list
+        Column(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .padding(horizontal = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            QuizCategory("Python")
+            QuizCategory("OOPs")
+            QuizCategory("Machine Learning")
+        }
+
+        // Privacy Policy Dialog
+        if (showPrivacyDialog) {
+            AlertDialog(
+                onDismissRequest = { showPrivacyDialog = false },
+                confirmButton = {
+                    TextButton(onClick = { showPrivacyDialog = false }) {
+                        Text("OK")
+                    }
+                },
+                title = { Text("Privacy Policy") },
+                text = {
+                    Text(
+                        "This app collects no personal data. Your quiz results are stored anonymously in the leaderboard. " +
+                                "We do not share your information with any third party."
+                    )
+                }
+            )
+        }
     }
 }
+
+
+
+
 
 
 @Composable
