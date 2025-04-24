@@ -17,17 +17,31 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.util.PatternsCompat
 import com.example.quizmaster.ui.theme.QuizMasterTheme
+import com.google.firebase.auth.FirebaseAuth
 
 class SignUpActivity : ComponentActivity() {
+
+    private lateinit var auth: FirebaseAuth
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        auth = FirebaseAuth.getInstance()
+
         setContent {
             QuizMasterTheme {
                 SignUpScreen { email, password, confirmPassword ->
                     if (validateInput(email, password, confirmPassword)) {
-                        Toast.makeText(this, "Sign Up Successful!", Toast.LENGTH_SHORT).show()
-                        startActivity(Intent(this, LoginActivity::class.java)) // Go to Login after SignUp
-                        finish()
+                        auth.createUserWithEmailAndPassword(email, password)
+                            .addOnCompleteListener(this) { task ->
+                                if (task.isSuccessful) {
+                                    Toast.makeText(this, "Sign Up Successful!", Toast.LENGTH_SHORT).show()
+                                    startActivity(Intent(this, LoginActivity::class.java))
+                                    finish()
+                                } else {
+                                    Toast.makeText(this, "Sign Up Failed: ${task.exception?.message}", Toast.LENGTH_LONG).show()
+                                }
+                            }
                     } else {
                         Toast.makeText(this, "Invalid Input", Toast.LENGTH_SHORT).show()
                     }
@@ -42,6 +56,7 @@ class SignUpActivity : ComponentActivity() {
                 password == confirmPassword
     }
 }
+
 
 @Composable
 fun SignUpScreen(onSignUp: (String, String, String) -> Unit) {

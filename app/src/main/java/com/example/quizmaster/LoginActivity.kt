@@ -2,9 +2,11 @@ package com.example.quizmaster
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -19,21 +21,34 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.quizmaster.ui.theme.QuizMasterTheme
+import com.google.firebase.auth.FirebaseAuth
 
 class LoginActivity : ComponentActivity() {
+    private lateinit var auth: FirebaseAuth
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        auth = FirebaseAuth.getInstance()
+
         setContent {
             QuizMasterTheme {
                 val context = this
-                LoginScreen {
-                    startActivity(Intent(context, HomepageActivity::class.java))
-                    finish()
+                LoginScreen { email, password ->
+                    auth.signInWithEmailAndPassword(email, password)
+                        .addOnCompleteListener { task ->
+                            if (task.isSuccessful) {
+                                Toast.makeText(context, "Login Successful", Toast.LENGTH_SHORT).show()
+                                startActivity(Intent(context, HomepageActivity::class.java))
+                                finish()
+                            } else {
+                                Toast.makeText(context, "Login failed: ${task.exception?.localizedMessage}", Toast.LENGTH_LONG).show()
+                            }
+                        }
                 }
             }
         }
@@ -41,7 +56,7 @@ class LoginActivity : ComponentActivity() {
 }
 
 @Composable
-fun LoginScreen(onLogin: () -> Unit) {
+fun LoginScreen(onLogin: (String, String) -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val context = LocalContext.current
@@ -53,25 +68,18 @@ fun LoginScreen(onLogin: () -> Unit) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFFBBDEFB) // Light blue
-                ),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFBBDEFB)),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Column(
                     modifier = Modifier.padding(24.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                    Text("GDPR Compliance", style = MaterialTheme.typography.titleLarge, color = BlueSecondary)
                     Text(
-                        text = "GDPR Compliance",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = BlueSecondary
-                    )
-                    Text(
-                        text = "We use your data to improve your quiz experience. " +
+                        "We use your data to improve your quiz experience. " +
                                 "By continuing, you agree to our terms and privacy policy.",
-                        fontSize = 16.sp,
-                        color = Color.Black
+                        fontSize = 16.sp
                     )
                     Button(
                         onClick = { showGdprDialog = false },
@@ -88,11 +96,7 @@ fun LoginScreen(onLogin: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(GreenPrimary, BlueSecondary)
-                )
-            ),
+            .background(brush = Brush.verticalGradient(colors = listOf(GreenPrimary, BlueSecondary))),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -100,15 +104,9 @@ fun LoginScreen(onLogin: () -> Unit) {
                 .fillMaxWidth(0.9f)
                 .clip(RoundedCornerShape(16.dp))
                 .background(Color.White)
-                .padding(24.dp),
-            verticalArrangement = Arrangement.Center
+                .padding(24.dp)
         ) {
-            Text(
-                text = "Login",
-                style = MaterialTheme.typography.headlineMedium,
-                color = GreenPrimary
-            )
-
+            Text("Login", style = MaterialTheme.typography.headlineMedium, color = GreenPrimary)
             Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedTextField(
@@ -133,7 +131,13 @@ fun LoginScreen(onLogin: () -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(
-                onClick = { onLogin() },
+                onClick = {
+                    if (email.isNotBlank() && password.isNotBlank()) {
+                        onLogin(email.trim(), password.trim())
+                    } else {
+                        Toast.makeText(context, "Please fill in all fields", Toast.LENGTH_SHORT).show()
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = GreenPrimary)
             ) {
@@ -147,7 +151,7 @@ fun LoginScreen(onLogin: () -> Unit) {
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = "Don't have an account?", fontSize = 16.sp, color = Color.Gray)
+                Text("Don't have an account?", fontSize = 16.sp, color = Color.Gray)
                 Spacer(modifier = Modifier.width(4.dp))
                 TextButton(
                     onClick = {
@@ -155,28 +159,12 @@ fun LoginScreen(onLogin: () -> Unit) {
                     },
                     contentPadding = PaddingValues(0.dp)
                 ) {
-                    Text(
-                        text = "Sign Up",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = BlueSecondary
-                    )
+                    Text("Sign Up", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = BlueSecondary)
                 }
             }
         }
     }
 }
 
-
-// Theme colors
 val GreenPrimary = Color(0xFF4CAF50)
 val BlueSecondary = Color(0xFF2196F3)
-
-@Preview(showBackground = true)
-@Composable
-fun LoginScreenPreview() {
-    QuizMasterTheme {
-        LoginScreen { }
-    }
-}
-

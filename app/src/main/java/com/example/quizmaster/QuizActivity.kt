@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.quizmaster.ui.theme.QuizMasterTheme
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.*
@@ -37,27 +38,10 @@ class QuizActivity : ComponentActivity() {
 
 @Composable
 fun QuizScreen(subject: String) {
-    val allQuestions = mapOf(
-        "Python" to listOf(
-            QuizQuestion("What is the correct file extension for Python files?", listOf(".py", ".pt", ".pyt", ".pyth"), 0),
-            QuizQuestion("Which keyword is used for function in Python?", listOf("func", "define", "def", "function"), 2),
-            QuizQuestion("Which data type is used to store True or False?", listOf("int", "str", "bool", "float"), 2),
-        ),
-        "OOPs" to listOf(
-            QuizQuestion("OOP stands for?", listOf("Object Oriented Programming", "Operator On Point", "Optical Operation", "Ordered Oriented Procedure"), 0),
-            QuizQuestion("Which of the following is not a pillar of OOP?", listOf("Encapsulation", "Polymorphism", "Abstraction", "Compilation"), 3),
-            QuizQuestion("What is inheritance?", listOf("A way to inherit money", "A way to reuse code", "A loop concept", "A variable type"), 1),
-        ),
-        "Machine Learning" to listOf(
-            QuizQuestion("ML is a subset of?", listOf("Math", "AI", "Physics", "Robotics"), 1),
-            QuizQuestion("Which of these is a ML algorithm?", listOf("Linear Regression", "Sorting", "Searching", "Merging"), 0),
-            QuizQuestion("What is overfitting?", listOf("When a model is too simple", "When a model fits the training data too well", "A type of neural network", "None"), 1),
-        )
-    )
-
     val context = LocalContext.current
-    val questions = allQuestions[subject] ?: emptyList()
+    val firestore = FirebaseFirestore.getInstance()
 
+    var questions by remember { mutableStateOf<List<QuizQuestion>>(emptyList()) }
     var currentIndex by remember { mutableIntStateOf(0) }
     var selectedAnswer by remember { mutableIntStateOf(-1) }
     var timer by remember { mutableIntStateOf(10) }
@@ -66,8 +50,27 @@ fun QuizScreen(subject: String) {
     var totalTime by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(currentIndex, quizCompleted) {
-        if (!quizCompleted && currentIndex < questions.size) {
+    var loading by remember { mutableStateOf(true) }
+
+    // Fetch questions from Firestore
+    LaunchedEffect(subject) {
+        firestore.collection("quizzes")
+            .document(subject)
+            .collection("questions")
+            .get()
+            .addOnSuccessListener { snapshot ->
+                questions = snapshot.documents.mapNotNull { doc ->
+                    doc.toObject(QuizQuestion::class.java)
+                }.shuffled()
+                loading = false
+            }
+            .addOnFailureListener {
+                loading = false
+            }
+    }
+
+    LaunchedEffect(currentIndex, quizCompleted, questions) {
+        if (!quizCompleted && questions.isNotEmpty() && currentIndex < questions.size) {
             selectedAnswer = -1
             timer = 10
             scope.launch {
@@ -87,14 +90,12 @@ fun QuizScreen(subject: String) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(Color(0xFF2196F3), Color(0xFF64B5F6))
-                )
-            )
+            .background(Brush.verticalGradient(listOf(Color(0xFF2196F3), Color(0xFF64B5F6))))
             .padding(24.dp)
     ) {
-        if (!quizCompleted && currentIndex < questions.size) {
+        if (loading) {
+            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color.White)
+        } else if (!quizCompleted && currentIndex < questions.size) {
             val question = questions[currentIndex]
 
             Column(
@@ -216,12 +217,10 @@ fun AnswerOption(text: String, selected: Boolean, onClick: () -> Unit) {
     }
 }
 
-// ------------------------ DATA MODELS ------------------------
-
 data class QuizQuestion(
-    val question: String,
-    val options: List<String>,
-    val correctAnswer: Int
+    val question: String = "",
+    val options: List<String> = emptyList(),
+    val correctAnswer: Int = 0
 )
 
 data class LeaderboardEntry(
